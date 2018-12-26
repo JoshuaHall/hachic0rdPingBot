@@ -1,4 +1,4 @@
-import { Message, TextChannel, User, Client } from 'discord.js';
+import { Message, TextChannel, User, Client, Collection } from 'discord.js';
 
 import { IPingBotOptions } from './options';
 
@@ -8,7 +8,7 @@ export class PingBot {
   private currentlyPingSpamming: boolean = false;
   private currentlySpammedUserId: string = '';
 
-  constructor(private readonly discordClient: Client, private readonly options: IPingBotOptions) {}
+  constructor(private readonly discordClient: Client, private readonly pingBotOptions: IPingBotOptions) {}
 
   /**
    * Listens for the message event
@@ -19,23 +19,18 @@ export class PingBot {
 
     const firstWord = words[0];
 
-    if (firstWord === this.options.commandParam) {
+    if (firstWord === this.pingBotOptions.commandParam) {
       const currentChannel: TextChannel = message.channel as TextChannel;
-      const usersMentioned = message.mentions.users;
+      const usersMentioned: Collection<string, User> = message.mentions.users;
 
-      if (usersMentioned !== null) {
+      const firstUser: User = usersMentioned.first();
 
-        const firstUser: User = usersMentioned.first();
-
-        if (firstUser) {
-          this.currentIntervalId = this.startPingSpam(currentChannel, firstUser);
-        } else {
-          currentChannel.send('Error getting user to ping.');
-        }
+      if (firstUser !== undefined) {
+        this.currentIntervalId = this.startPingSpam(currentChannel, firstUser);
       } else if (this.currentlyPingSpamming) {
         this.stopPingSpam(currentChannel, this.currentIntervalId);
       } else {
-        currentChannel.send(`${this.discordClient.user.username} is not currently running. Please type ${this.options.commandParam} <tag> to ping someone.`);
+        currentChannel.send(`${this.discordClient.user.username} is not currently running. Please type ${this.pingBotOptions.commandParam} <tag> to ping someone.`);
       }
     }
   }
@@ -44,7 +39,7 @@ export class PingBot {
    * Listens for the ready event
    */
   public readyListener(): void {
-    console.log(`${this.discordClient.user.username} finished start up at: ${this.discordClient.readyAt.toLocaleTimeString()}`);
+    console.log(`Ping bot start up finished at ${new Date().toLocaleTimeString()}`);
   }
 
   /**
@@ -63,7 +58,7 @@ export class PingBot {
 
     const intervalId: number = setInterval(() => {
       channel.send(`<@${userId}>`);
-    }, this.options.messageInterval);
+    }, this.pingBotOptions.messageInterval) as unknown as number;
 
     return intervalId;
   }
@@ -77,8 +72,9 @@ export class PingBot {
     this.currentlyPingSpamming = false;
     this.discordClient.fetchUser(this.currentlySpammedUserId).then((user) => {
       channel.send(`Stopped pinging ${user.username}`);
-    }).catch(() => {
+    }).catch((err) => {
       channel.send(`Error finding currently spammed user by user id.`);
+      console.error(err);
     });
     this.currentlySpammedUserId = '';
     clearInterval(intervalId);

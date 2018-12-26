@@ -6,6 +6,8 @@
   "author": "Joshua Hall",
   "license": "MIT",
   "dependencies": {
+    "@types/events": "^1.2.0",
+    "@types/node": "^10.12.18",
     "discord.js": "^11.4.2"
   }
 }
