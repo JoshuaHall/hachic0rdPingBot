@@ -1,0 +1,11 @@
+{
+  "name": "discord-ping-bot",
+  "version": "1.0.0",
+  "description": "Pings a user repeatedly",
+  "main": "index.js",
+  "author": "Joshua Hall",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^11.4.2"
+  }
+}
