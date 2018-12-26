@@ -10,6 +10,10 @@ export class PingBot {
 
   constructor(private readonly discordClient: Client, private readonly options: IPingBotOptions) {}
 
+  /**
+   * Listens for the message event
+   * @param message The message that was sent
+   */
   public messageListener(message: Message): void {
     const words = message.content.split(' ');
 
@@ -34,6 +38,13 @@ export class PingBot {
         currentChannel.send(`${this.discordClient.user.username} is not currently running. Please type ${this.options.commandParam} <tag> to ping someone.`);
       }
     }
+  }
+
+  /**
+   * Listens for the ready event
+   */
+  public readyListener(): void {
+    console.log(`${this.discordClient.user.username} is ready!`);
   }
 
   /**
