@@ -87,3 +87,5 @@ typings/
 
 # Misc
 token.ts
+*.js
+/out
