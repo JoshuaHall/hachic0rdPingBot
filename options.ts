@@ -1,6 +1,6 @@
 import { ClientOptions } from 'discord.js';
 
-interface IPingBotOptions {
+export interface IPingBotOptions {
   commandParam: string;
   messageInterval: number;
 }
