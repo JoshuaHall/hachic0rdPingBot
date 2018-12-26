@@ -44,7 +44,7 @@ export class PingBot {
    * Listens for the ready event
    */
   public readyListener(): void {
-    console.log(`${this.discordClient.user.username} is ready!`);
+    console.log(`${this.discordClient.user.username} finished start up at: ${this.discordClient.readyAt.toLocaleTimeString()}`);
   }
 
   /**
