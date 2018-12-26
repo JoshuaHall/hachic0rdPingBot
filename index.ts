@@ -1,23 +1,15 @@
-/**
- * A ping pong bot, whenever you send "ping", it replies "pong".
- */
-
 import * as Discord from 'discord.js';
 
 import { token } from './token';
+import { clientOptions, pingBotOptions } from './options';
 
-const commandParam = '!pingspam';
-
-// Create an instance of a Discord client
-const client = new Discord.Client();
-
-client.options.disableEveryone = true;
+const client = new Discord.Client(clientOptions);
 
 let currentlyPingSpamming: boolean = false;
 
 let currentlySpammedUserId: string = '';
 
-let intervalId: number = -1;
+let currentIntervalId: number = -1;
 
 /**
  * The ready event is vital, it means that only _after_ this will your bot start reacting to information
@@ -27,49 +19,64 @@ client.on('ready', () => {
   console.log('I am ready!');
 });
 
-// Create an event listener for messages
-client.on('message', (message) => {
+client.on('message', messageListener);
 
+// Login the bot
+client.login(token);
+
+function messageListener(message: Discord.Message): void {
   const words = message.content.split(' ');
 
   const firstWord = words[0];
 
-  if (firstWord === commandParam) {
+  if (firstWord === pingBotOptions.commandParam) {
     const currentChannel: Discord.TextChannel = message.channel as Discord.TextChannel;
     const usersMentioned = message.mentions.users;
-
-    usersMentioned.first();
 
     if (usersMentioned !== null) {
 
       const firstUser: Discord.User = usersMentioned.first();
 
       if (firstUser) {
-        currentlyPingSpamming = true;
-
-        currentChannel.send(`Activated ${client.user.username}. Beginning ping spam.`);
-
-        currentlySpammedUserId = firstUser.id;
-
-        intervalId = pingSpam(currentChannel, firstUser.id);
+        currentIntervalId = startPingSpam(currentChannel, firstUser);
       } else {
         currentChannel.send('Error getting user to ping.');
       }
     } else if (currentlyPingSpamming) {
-      stopPingSpam(currentChannel, intervalId);
+      stopPingSpam(currentChannel, currentIntervalId);
     } else {
-      currentChannel.send(`${client.user.username} is not currently running. Please type ${commandParam} <tag> to ping someone.`);
+      currentChannel.send(`${client.user.username} is not currently running. Please type ${pingBotOptions.commandParam} <tag> to ping someone.`);
     }
   }
-});
-
-function pingSpam(channel: Discord.TextChannel, userId: string): number {
-  return setInterval(() => {
-    channel.send(`<@${userId}>`);
-  }, 1000);
 }
 
-function stopPingSpam(channel: Discord.TextChannel, id: number): void {
+/**
+ * Pings a user repeatedly
+ * @param channel The channel to ping the user in
+ * @param user The Discord user to ping
+ *
+ * @returns The setInterval id number so it can be turned off later via clearInterval
+ */
+function startPingSpam(channel: Discord.TextChannel, user: Discord.User): number {
+  channel.send(`Activated ${client.user.username}. Beginning ping spam.`);
+
+  const userId: string = user.id;
+  currentlyPingSpamming = true;
+  currentlySpammedUserId = userId;
+
+  const intervalId: number = setInterval(() => {
+    channel.send(`<@${userId}>`);
+  }, pingBotOptions.messageInterval);
+
+  return intervalId;
+}
+
+/**
+ * Stops pinging a user
+ * @param channel The channel to send the message that the pings have stopped in
+ * @param intervalId The id returned by setInterval to find and shut off the loop
+ */
+function stopPingSpam(channel: Discord.TextChannel, intervalId: number): void {
   currentlyPingSpamming = false;
   client.fetchUser(currentlySpammedUserId).then((user) => {
     channel.send(`Stopped pinging ${user.username}`);
@@ -77,8 +84,5 @@ function stopPingSpam(channel: Discord.TextChannel, id: number): void {
     channel.send(`Error finding currently spammed user by user id.`);
   });
   currentlySpammedUserId = '';
-  clearInterval(id);
+  clearInterval(intervalId);
 }
-
-// Log our bot in using the token from https://discordapp.com/developers/applications/me
-client.login(token);
