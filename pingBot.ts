@@ -4,7 +4,7 @@ import { IPingBotOptions } from './options';
 
 export class PingBot {
 
-  private currentIntervalId: number = -1;
+  private currentIntervalId: NodeJS.Timeout | undefined = undefined;
   private currentlyPingSpamming: boolean = false;
   private currentlySpammedUserId: string = '';
 
@@ -19,9 +19,7 @@ export class PingBot {
     console.log(`Beginning client startup process at ${new Date().toLocaleTimeString()}`);
 
     // Lets us know the bot is finished starting
-    this.discordClient.on('ready', () => {
-      this.readyListener();
-    });
+    this.discordClient.on('ready', this.readyListener.bind(this));
 
     // Prints useful messages to console
     // client.on('error', console.error);
@@ -29,12 +27,10 @@ export class PingBot {
     // client.on('rateLimit', console.log);
 
     // Listens for commands
-    this.discordClient.on('message', (msg) => {
-      this.messageListener(msg);
-    });
+    this.discordClient.on('message',this.messageListener.bind(this));
 
     // Login the bot
-    this.discordClient.login(token);
+    this.discordClient.login(token).then(console.log).catch(console.error);
   }
 
   /**
@@ -42,9 +38,9 @@ export class PingBot {
    * @param message The message that was sent
    */
   private messageListener(message: Message): void {
-    const words = message.content.split(' ');
+    const words: string[] = message.content.split(' ');
 
-    const firstWord = words[0];
+    const firstWord: string = words[0];
 
     if (firstWord === this.pingBotOptions.commandParam) {
       const currentChannel: TextChannel = message.channel as TextChannel;
@@ -53,9 +49,9 @@ export class PingBot {
       const firstUser: User = usersMentioned.first();
 
       if (firstUser !== undefined) {
-        this.currentIntervalId = this.startPingSpam(currentChannel, firstUser);
+        this.currentIntervalId = this.startPingSpam(currentChannel, firstUser.id);
       } else if (this.currentlyPingSpamming) {
-        this.stopPingSpam(currentChannel, this.currentIntervalId);
+        this.stopPingSpam(currentChannel, this.currentIntervalId as NodeJS.Timeout);
       } else {
         currentChannel.send(`${this.discordClient.user.username} is not currently running. Please type ${this.pingBotOptions.commandParam} <tag> to ping someone.`);
       }
@@ -72,22 +68,19 @@ export class PingBot {
   /**
    * Pings a user repeatedly
    * @param channel The channel to ping the user in
-   * @param user The Discord user to ping
+   * @param userId The Discord user Id to get the user of
    *
    * @returns The setInterval id number so it can be turned off later via clearInterval
    */
-  private startPingSpam(channel: TextChannel, user: User): number {
+  private startPingSpam(channel: TextChannel, userId: string): NodeJS.Timeout {
     channel.send(`Activated ${this.discordClient.user.username}. Beginning ping spam.`);
 
-    const userId: string = user.id;
     this.currentlyPingSpamming = true;
     this.currentlySpammedUserId = userId;
 
-    const intervalId: number = setInterval(() => {
+    return this.discordClient.setInterval(() => {
       channel.send(`<@${userId}>`);
-    }, this.pingBotOptions.messageInterval) as unknown as number;
-
-    return intervalId;
+    }, this.pingBotOptions.messageInterval);
   }
 
   /**
@@ -95,15 +88,17 @@ export class PingBot {
    * @param channel The channel to send the message that the pings have stopped in
    * @param intervalId The id returned by setInterval to find and shut off the loop
    */
-  private stopPingSpam(channel: TextChannel, intervalId: number): void {
+  private stopPingSpam(channel: TextChannel, intervalId: NodeJS.Timeout): void {
     this.currentlyPingSpamming = false;
+
     this.discordClient.fetchUser(this.currentlySpammedUserId).then((user) => {
       channel.send(`Stopped pinging ${user.username}`);
     }).catch((err) => {
       channel.send(`Error finding currently spammed user by user id.`);
       console.error(err);
     });
+
     this.currentlySpammedUserId = '';
-    clearInterval(intervalId);
+    this.discordClient.clearInterval(intervalId);
   }
 }
