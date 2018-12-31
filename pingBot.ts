@@ -8,13 +8,40 @@ export class PingBot {
   private currentlyPingSpamming: boolean = false;
   private currentlySpammedUserId: string = '';
 
-  constructor(private readonly discordClient: Client, private readonly pingBotOptions: IPingBotOptions) {}
+  constructor(private readonly discordClient: Client, private readonly pingBotOptions: IPingBotOptions) { }
+
+  /**
+   * Starts the ping bot
+   * @param token Bot token to login with
+   */
+  public start(token: string): void {
+
+    console.log(`Beginning client startup process at ${new Date().toLocaleTimeString()}`);
+
+    // Lets us know the bot is finished starting
+    this.discordClient.on('ready', () => {
+      this.readyListener();
+    });
+
+    // Prints useful messages to console
+    // client.on('error', console.error);
+    // client.on('warn', console.warn);
+    // client.on('rateLimit', console.log);
+
+    // Listens for commands
+    this.discordClient.on('message', (msg) => {
+      this.messageListener(msg);
+    });
+
+    // Login the bot
+    this.discordClient.login(token);
+  }
 
   /**
    * Listens for the message event
    * @param message The message that was sent
    */
-  public messageListener(message: Message): void {
+  private messageListener(message: Message): void {
     const words = message.content.split(' ');
 
     const firstWord = words[0];
@@ -38,7 +65,7 @@ export class PingBot {
   /**
    * Listens for the ready event
    */
-  public readyListener(): void {
+  private readyListener(): void {
     console.log(`Ping bot start up finished at ${new Date().toLocaleTimeString()}`);
   }
 
